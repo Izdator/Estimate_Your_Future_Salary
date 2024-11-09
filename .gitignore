@@ -1,0 +1,16 @@
+.cache/
+.idea/
+/*.env
+.pythonlibs/
+.upm/
+.*pycache*/
+.venv/
+.replit/
+/python3
+/replit.nix
+/replit_zip_error_log.txt
+/poetry.lock
+/pyproject.toml
+*.pyc
+*.pyd
+*.pyo
