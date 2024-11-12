@@ -88,7 +88,8 @@ def main():
                 print(f"Загрузка вакансий для языка: {language}, Страница: {page}")
                 response = requests.get(url, params=params)
 
-                if response.status_code == 200:
+                if response.ok:
+                    pass
                     data = response.json()
                     total_found_vacancies += len(data['items'])
 
@@ -158,7 +159,8 @@ def main():
             params["page"] = page
             response = requests.get(url, headers=headers, params=params)
 
-            if response.status_code == 200:
+            if response.ok:
+                pass
                 data = response.json()
                 total_vacancies_found += data.get('total', 0)
 
