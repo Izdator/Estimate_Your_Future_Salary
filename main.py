@@ -93,7 +93,7 @@ def main():
                     for vacancy in response_json['items']:
                         salary = vacancy['salary']
                         rub_salary = predict_rub_salary_hh(salary)
-                        if rub_salary is not None:
+                        if rub_salary:
                             total_salary += rub_salary
                             total_vacancies_with_salary += 1
 
@@ -166,7 +166,7 @@ def main():
                 for vacancy in response_json_superjob.get('objects', []):
                     expected_salary = predict_rub_salary_sj(vacancy)
 
-                    if expected_salary is not None:
+                    if expected_salary:
                         total_vacancies_processed += 1
                         total_salary += expected_salary
             else:
