@@ -67,13 +67,11 @@ def print_statistics_table(statistics):
 
 def main():
     url = "https://api.hh.ru/vacancies"
-    languages = []
-    results = {language: {'average_salary': 0, 'found_count': 0, 'processed_count': 0} for language in languages}
+    results = {language: {'average_salary': 0, 'found_count': 0, 'processed_count': 0} for language in LANGUAGES}
 
-    for language in languages:
+    for language in LANGUAGES:
         total_salary = 0
         total_vacancies_with_salary = 0
-        total_found_vacancies = 0
         page = 0
 
         while True:
@@ -89,9 +87,8 @@ def main():
                 response = requests.get(url, params=params)
 
                 if response.ok:
-                    pass
                     response_json = response.json()
-                    total_found_vacancies += len(response_json['items'])
+                    results[language]['found_count'] = response_json['found']
 
                     for item in response_json['items']:
                         salary = item['salary']
@@ -112,7 +109,6 @@ def main():
 
         if total_vacancies_with_salary > 0:
             results[language]['average_salary'] = total_salary / total_vacancies_with_salary
-        results[language]['found_count'] = total_found_vacancies
         results[language]['processed_count'] = total_vacancies_with_salary
 
     table_data = [['Язык программирования', 'Найдено вакансий', 'Обработано вакансий', 'Средняя зарплата']]
