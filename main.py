@@ -107,7 +107,7 @@ def main():
                 print(f"Произошла ошибка при запросе для {language}, Страница {page}: {e}")
                 break
 
-        if total_vacancies_with_salary > 0:
+        if any(total_vacancies_with_salary):
             results[language]['average_salary'] = total_salary / total_vacancies_with_salary
         results[language]['processed_count'] = total_vacancies_with_salary
 
@@ -173,7 +173,7 @@ def main():
                 print(f"Ошибка при запросе: {response.status_code}")
                 break
 
-        average_salary = total_salary / total_vacancies_processed if total_vacancies_processed > 0 else 0
+        average_salary = total_salary / total_vacancies_processed if any(total_vacancies_processed) else 0
 
         statistics[language] = {
             "vacancies_found": total_vacancies_found,
