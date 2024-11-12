@@ -90,17 +90,17 @@ def main():
 
                 if response.ok:
                     pass
-                    data = response.json()
-                    total_found_vacancies += len(data['items'])
+                    response_json = response.json()
+                    total_found_vacancies += len(response_json['items'])
 
-                    for item in data['items']:
+                    for item in response_json['items']:
                         salary = item['salary']
                         rub_salary = predict_rub_salary_hh(salary)
                         if rub_salary is not None:
                             total_salary += rub_salary
                             total_vacancies_with_salary += 1
 
-                    if len(data['items']) < 100:
+                    if len(response_json['items']) < 100:
                         break
                     page += 1
                 else:
@@ -161,13 +161,13 @@ def main():
 
             if response.ok:
                 pass
-                data = response.json()
-                total_vacancies_found += data.get('total', 0)
+                response_json_superjob = response.json()
+                total_vacancies_found += response_json_superjob.get('total', 0)
 
-                if not data.get('objects'):
+                if not response_json_superjob.get('objects'):
                     break
 
-                for item in data.get('objects', []):
+                for item in response_json_superjob.get('objects', []):
                     expected_salary = predict_rub_salary_sj(item)
 
                     if expected_salary is not None:
