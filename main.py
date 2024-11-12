@@ -4,10 +4,8 @@ import os
 import requests
 from terminaltables import AsciiTable
 
-load_dotenv()
-API_KEY = os.environ.get('SUPERJOB_TOKEN')
 
-languages = [
+LANGUAGES = [
     'JavaScript',
     'Java',
     'Python',
@@ -20,7 +18,7 @@ languages = [
     'Go'
 ]
 
-results = {language: {'found_count': 0, 'processed_count': 0, 'average_salary': 0} for language in languages}
+results = {language: {'found_count': 0, 'processed_count': 0, 'average_salary': 0} for language in LANGUAGES}
 
 
 def predict_rub_salary_hh(salary):
@@ -38,7 +36,7 @@ def predict_rub_salary_hh(salary):
 
 url = "https://api.hh.ru/vacancies"
 
-for language in languages:
+for language in LANGUAGES:
     total_salary = 0
     total_vacancies_with_salary = 0  
     total_found_vacancies = 0
@@ -184,3 +182,8 @@ for language in programming_languages:
     }
 
 print_statistics_table(statistics)
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    API_KEY = os.environ.get('SUPERJOB_TOKEN')
