@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import requests
 from terminaltables import AsciiTable
+from typing import Dict
 
 
 LANGUAGES = [
@@ -17,7 +18,6 @@ LANGUAGES = [
     'C',
     'Go'
 ]
-
 
 
 def predict_rub_salary_hh(salary):
@@ -37,13 +37,10 @@ def predict_rub_salary_sj(vacancy):
     payment_from = vacancy.get('payment_from')
     payment_to = vacancy.get('payment_to')
     agreement = vacancy.get('agreement', False)
-
     if agreement:
         return None
-
     if vacancy.get('currency', 'rub') != 'rub':
         return None
-
     if payment_from is not None and payment_to is not None:
         return (payment_from + payment_to) / 2
     elif payment_from is not None:
@@ -54,14 +51,17 @@ def predict_rub_salary_sj(vacancy):
         return None
 
 
-def print_statistics_table(statistics):
+def print_statistics(source: str, statistics: Dict[str, Dict[str, int]]) -> None:
     table_data = [['Язык программирования', 'Вакансий найдено', 'Вакансий обработано', 'Средняя зарплата']]
 
     for language, data in statistics.items():
-        table_data.append([language, data["vacancies_found"], data["vacancies_processed"], data["average_salary"]])
-
-    table = AsciiTable(table_data, title="SuperJob Moscow")
-    print(table.table)
+        if source == "SuperJob":
+            table_data.append([language, data["vacancies_found"], data["vacancies_processed"], data["average_salary"]])
+        elif source == "HeadHunter":
+            table_data.append(
+                [language, data['found_count'], data['processed_count'], f"{data['average_salary']:.2f} ₽"])
+        else:
+            raise ValueError("Неизвестный источник статистики.")
 
     def load_vacancies(language, url):
         total_salary = 0
@@ -108,13 +108,6 @@ def print_statistics_table(statistics):
             return total_salary / total_vacancies_with_salary
         return 0
 
-    def print_results(results):
-        table_data = [['Язык программирования', 'Найдено вакансий', 'Обработано вакансий', 'Средняя зарплата']]
-        for lang, info in results.items():
-            table_data.append([lang, info['found_count'], info['processed_count'], f"{info['average_salary']:.2f} ₽"])
-
-        table = AsciiTable(table_data, title="HeadHunter Moscow")
-        print(table.table)
 
     def main():
         url = "https://api.hh.ru/vacancies"
@@ -126,20 +119,20 @@ def print_statistics_table(statistics):
             results[language]['processed_count'] = total_vacancies_with_salary
             results[language]['average_salary'] = calculate_average_salary(total_salary, total_vacancies_with_salary)
 
-        print_results(results)
+        table_title = f"{source} Moscow"
+        table = AsciiTable(table_data, title=table_title)
+        print(table.table)
 
+    print_statistics(statistics)
     def load_environment_variables():
-        """ Загрузить переменные окружения из файла .env. """
         load_dotenv()
 
     def fetch_vacancies(url, headers, params):
-        """ Запрос вакансий с указанными параметрами. """
         response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()  # Поднимаем исключение для плохих запросов
+        response.raise_for_status()
         return response.json()
 
     def process_vacancies(programming_languages, url, headers):
-        """ Обрабатывает вакансии по языкам программирования. """
         statistics = {}
 
         for language in programming_languages:
@@ -185,17 +178,6 @@ def print_statistics_table(statistics):
 
         return statistics
 
-    def print_statistics_table(statistics):
-        """ Выводит статистику вакансий в формате таблицы. """
-        table_data = [['Язык программирования', 'Найдено вакансий', 'Обработано вакансий', 'Средняя зарплата']]
-        for lang, info in statistics.items():
-            table_data.append(
-                [lang, info['vacancies_found'], info['vacancies_processed'], f"{info['average_salary']:.2f} ₽"])
-
-        table = AsciiTable(table_data, title="Статистика вакансий SuperJob")
-        print(table.table)
-
-    def load_environment_variables():
         load_dotenv()
 
     def fetch_vacancies(url, headers, params):
@@ -249,16 +231,7 @@ def print_statistics_table(statistics):
 
         return statistics
 
-    def print_statistics_table(statistics):
-        table_data = [['Язык программирования', 'Найдено вакансий', 'Обработано вакансий', 'Средняя зарплата']]
-        for lang, info in statistics.items():
-            table_data.append(
-                [lang, info['vacancies_found'], info['vacancies_processed'], f"{info['average_salary']:.2f} ₽"])
 
-        table = AsciiTable(table_data, title="Статистика вакансий SuperJob")
-        print(table.table)
-
-    def main():
         load_environment_variables()
 
         url = "https://api.superjob.ru/2.0/vacancies/"
@@ -303,7 +276,7 @@ def print_statistics_table(statistics):
         ]
 
         statistics = process_vacancies(programming_languages, url, headers)
-        print_statistics_table(statistics)
+        print_statistics(statistics)
 
     if __name__ == '__main__':
         main()
