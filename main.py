@@ -17,21 +17,20 @@ LANGUAGES = [
 ]
 
 
-def predict_rub_salary(data):
-    if data is None or data.get('currency') not in ['RUR', 'rub']:
+def predict_rub_salary(salary_from, salary_to, currency):
+    if currency not in ['RUR', 'rub']:
         return 0
 
-    payment_from = data.get('salary', {}).get('from')
-    payment_to = data.get('salary', {}).get('to')
+    expected_salary = 0
 
-    if payment_from is not None and payment_to is not None:
-        return (payment_from + payment_to) / 2
-    elif payment_from is not None:
-        return payment_from * 1.2
-    elif payment_to is not None:
-        return payment_to * 0.8
+    if salary_from and salary_to:
+        expected_salary = (salary_from + salary_to) / 2
+    elif salary_from:
+        expected_salary = salary_from * 1.2
+    elif salary_to:
+        expected_salary = salary_to * 0.8
 
-    return 0
+    return expected_salary
 
 
 def calculate_average_salary(total_salary, total_vacancies_with_salary):
@@ -39,12 +38,12 @@ def calculate_average_salary(total_salary, total_vacancies_with_salary):
 
 
 def print_statistics_table(statistics, title):
-    table_data = [['Язык программирования', 'Найдено вакансий', 'Обработано вакансий', 'Средняя зарплата']]
+    vacancy_table = [['Язык программирования', 'Найдено вакансий', 'Обработано вакансий', 'Средняя зарплата']]
     for lang, info in statistics.items():
-        table_data.append(
+        vacancy_table.append(
             [lang, info['vacancies_found'], info['vacancies_processed'], f"{info['average_salary']:.2f} ₽"])
 
-    table = AsciiTable(table_data, title=title)
+    table = AsciiTable(vacancy_table, title=title)
     print(table.table)
 
 
@@ -70,12 +69,20 @@ def process_hh_vacancies(language, headers):
 
     while True:
         for vacancy in response_hh.get('items', []):
-            expected_salary = predict_rub_salary(vacancy)
+            salary = vacancy.get('salary')
+            if not salary:
+                continue
+
+            salary_from = salary.get('from')
+            salary_to = salary.get('to')
+            currency = salary.get('currency')
+
+            expected_salary = predict_rub_salary(salary_from, salary_to, currency)
+
             if expected_salary:
                 total_vacancies_processed += 1
                 total_salary += expected_salary
 
-        # Проверяем, есть ли еще страницы
         if params_hh['page'] >= response_hh['pages'] - 1:
             break
 
@@ -86,7 +93,6 @@ def process_hh_vacancies(language, headers):
 
 
 def process_sj_vacancies(language, url, headers):
-    total_vacancies_found = 0
     total_vacancies_processed = 0
     total_salary = 0
 
@@ -97,51 +103,54 @@ def process_sj_vacancies(language, url, headers):
     }
 
     page = 0
+    response_sj = fetch_vacancies(url, headers, params_sj)
+    total_vacancies_found = response_sj.get('total', 0)
+
     while True:
         page += 1
         params_sj['page'] = page
-
-        response_sj = fetch_vacancies(url, headers, params_sj)
-        total_vacancies_found += response_sj.get('total', 0)
 
         if not response_sj.get('objects'):
             break
 
         for vacancy in response_sj.get('objects', []):
-            expected_salary = predict_rub_salary(vacancy)
+            salary_from = vacancy.get('payment_from')
+            salary_to = vacancy.get('payment_to')
+            currency = vacancy.get('currency')
+
+            expected_salary = predict_rub_salary(salary_from, salary_to, currency)
+
             if expected_salary:
                 total_vacancies_processed += 1
                 total_salary += expected_salary
+
+        response_sj = fetch_vacancies(url, headers, params_sj)
 
     return total_vacancies_found, total_vacancies_processed, total_salary
 
 
 def process_vacancies(programming_languages, url, headers):
-    statistics = {}
+    statistics_hh = {}
+    statistics_sj = {}
 
     for language in programming_languages:
-        # Обработка вакансий из HeadHunter
         total_vacancies_found_hh, total_vacancies_processed_hh, total_salary_hh = process_hh_vacancies(language,
                                                                                                        headers)
-
-        # Обработка вакансий из SuperJob
-        total_vacancies_found_sj, total_vacancies_processed_sj, total_salary_sj = process_sj_vacancies(language, url,
-                                                                                                       headers)
-
-        # Суммируем статистику
-        total_vacancies_found = total_vacancies_found_hh + total_vacancies_found_sj
-        total_vacancies_processed = total_vacancies_processed_hh + total_vacancies_processed_sj
-        total_salary = total_salary_hh + total_salary_sj
-
-        average_salary = calculate_average_salary(total_salary, total_vacancies_processed)
-
-        statistics[language] = {
-            'vacancies_found': total_vacancies_found,
-            'vacancies_processed': total_vacancies_processed,
-            'average_salary': average_salary
+        statistics_hh[language] = {
+            'vacancies_found': total_vacancies_found_hh,
+            'vacancies_processed': total_vacancies_processed_hh,
+            'average_salary': calculate_average_salary(total_salary_hh, total_vacancies_processed_hh)
         }
 
-    return statistics
+        total_vacancies_found_sj, total_vacancies_processed_sj, total_salary_sj = process_sj_vacancies(language, url,
+                                                                                                       headers)
+        statistics_sj[language] = {
+            'vacancies_found': total_vacancies_found_sj,
+            'vacancies_processed': total_vacancies_processed_sj,
+            'average_salary': calculate_average_salary(total_salary_sj, total_vacancies_processed_sj)
+        }
+
+    return statistics_hh, statistics_sj
 
 
 def main():
@@ -153,8 +162,10 @@ def main():
         "X-Api-App-Id": api_key
     }
 
-    statistics = process_vacancies(LANGUAGES, url, headers)
-    print_statistics_table(statistics, title="Статистика вакансий")
+    statistics_hh, statistics_sj = process_vacancies(LANGUAGES, url, headers)
+
+    print_statistics_table(statistics_hh, title="Статистика вакансий на HeadHunter")
+    print_statistics_table(statistics_sj, title="Статистика вакансий на SuperJob")
 
 
 if __name__ == '__main__':
